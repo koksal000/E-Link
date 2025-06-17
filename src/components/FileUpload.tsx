@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback, ChangeEvent, DragEvent } from 'react';
@@ -14,7 +15,7 @@ interface FileUploadProps {
 
 const acceptedFileTypes: Record<string, string> = {
   "image/jpeg": ".jpg",
-  "image/png": ".png", // Added PNG as it's very common
+  "image/png": ".png",
   "video/mp4": ".mp4",
   "text/html": ".html",
 };
@@ -63,10 +64,10 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
       clearInterval(progressInterval);
       setProgress(100);
 
-      const fileExtension = acceptedFileTypes[file.type];
-      const fileNameWithoutExtension = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-      const mockFileId = `${fileNameWithoutExtension.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
-      const generatedLink = `https://cdn.e-link.com/files/${mockFileId}${fileExtension}`;
+      const fileExtension = acceptedFileTypes[file.type] || '.bin'; // Fallback extension
+      // Generate a short random ID, similar to catbox.moe links
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const generatedLink = `https://files.catbox.moe/${randomId}${fileExtension}`;
       
       onLinkGenerated(generatedLink);
       setIsLoading(false);

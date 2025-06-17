@@ -65,16 +65,15 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
       setProgress(100);
 
       const fileExtension = acceptedFileTypes[file.type] || '.bin'; // Fallback extension
-      // Generate a short random ID
       const randomId = Math.random().toString(36).substring(2, 8);
-      // Generate a link that implies it's served by the application itself
-      const generatedLink = `/files/${randomId}${fileExtension}`;
+      const relativeLink = `/files/${randomId}${fileExtension}`;
       
-      onLinkGenerated(generatedLink);
+      // Ensure window.location.origin is accessed only on the client side
+      const absoluteLink = typeof window !== 'undefined' ? `${window.location.origin}${relativeLink}` : relativeLink;
+      
+      onLinkGenerated(absoluteLink);
       setIsLoading(false);
       toast({ title: "Link Generated!", description: "Your file link is ready.", variant: "default", className: "bg-green-500 text-white" });
-      // Keep selectedFile to show info, or clear it:
-      // setSelectedFile(null); 
     }, 1500 + Math.random() * 1000); // Simulate network delay + processing
   }, [onLinkGenerated, toast]);
 
@@ -211,5 +210,3 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
     </Card>
   );
 }
-
-    

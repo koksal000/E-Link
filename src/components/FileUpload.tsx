@@ -16,6 +16,7 @@ interface FileUploadProps {
 const acceptedFileTypes: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
+  "image/gif": ".gif",
   "video/mp4": ".mp4",
   "text/html": ".html",
 };
@@ -31,13 +32,12 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
 
   const handleFileProcessing = useCallback(async (file: File) => {
     if (!acceptedFileTypes[file.type]) {
-      const err = `Unsupported file type: ${file.type}. Supported types are JPG, PNG, MP4, HTML.`;
+      const err = `Unsupported file type: ${file.type}. Supported types are JPG, PNG, GIF, MP4, HTML.`;
       setError(err);
       toast({ title: "Upload Error", description: err, variant: "destructive" });
       setSelectedFile(null);
@@ -46,42 +46,50 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
 
     setIsLoading(true);
     setError(null);
-    setProgress(0);
+    setSelectedFile(file); // Show file info immediately
 
-    // Simulate upload progress
-    let currentProgress = 0;
-    const progressInterval = setInterval(() => {
-      currentProgress += 10;
-      if (currentProgress <= 100) {
-        setProgress(currentProgress);
-      } else {
-        clearInterval(progressInterval);
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('userhash', ''); // For anonymous uploads
+    formData.append('fileToUpload', file);
+
+    try {
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText} (status: ${response.status})`);
       }
-    }, 150);
-    
-    // Simulate backend processing
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setProgress(100);
 
-      const fileExtension = acceptedFileTypes[file.type] || '.bin'; // Fallback extension
-      const randomId = Math.random().toString(36).substring(2, 8);
-      const relativeLink = `/files/${randomId}${fileExtension}`;
-      
+      const catboxUrl = await response.text();
+
+      if (!catboxUrl.startsWith('https://files.catbox.moe/')) {
+          throw new Error('Invalid response from file hosting service.');
+      }
+
+      const parts = catboxUrl.split('/');
+      const catboxFileIdWithExt = parts[parts.length - 1];
+
       const siteBaseUrl = "https://e-link-nine.vercel.app";
-      const absoluteLink = `${siteBaseUrl}${relativeLink}`;
+      const shareableLink = `${siteBaseUrl}/files/catbox/${catboxFileIdWithExt}`;
       
-      onLinkGenerated(absoluteLink);
-      setIsLoading(false);
+      onLinkGenerated(shareableLink);
       toast({ title: "Link Generated!", description: "Your file link is ready.", variant: "default", className: "bg-green-500 text-white" });
-    }, 1500 + Math.random() * 1000); // Simulate network delay + processing
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setError(err.message || "An unknown error occurred during upload.");
+      toast({ title: "Upload Error", description: err.message || "Could not upload file.", variant: "destructive" });
+      onLinkGenerated(""); // Clear any previous link
+    } finally {
+      setIsLoading(false);
+    }
   }, [onLinkGenerated, toast]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setError(null);
       handleFileProcessing(file);
     }
   };
@@ -92,8 +100,6 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
     setIsDragging(false);
     const file = event.dataTransfer.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setError(null);
       handleFileProcessing(file);
     }
   }, [handleFileProcessing]);
@@ -120,8 +126,7 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
     setSelectedFile(null);
     setError(null);
     setIsLoading(false);
-    setProgress(0);
-    onLinkGenerated(""); // Clear any existing link
+    onLinkGenerated(""); 
   };
 
   const FileIconToRender = selectedFile ? getFileIcon(selectedFile.type) : UploadCloud;
@@ -131,11 +136,11 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
       <CardHeader>
         <CardTitle className="text-2xl font-headline text-center text-primary">Upload Your File</CardTitle>
         <CardDescription className="text-center text-muted-foreground">
-          Drag & drop or click to select a file. Supported: JPG, PNG, MP4, HTML.
+          Drag & drop or click to select a file. Supported: JPG, PNG, GIF, MP4, HTML.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!selectedFile || error ? (
+        {!selectedFile && !isLoading && !error ? (
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -160,7 +165,7 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
               onChange={handleFileChange}
               accept={Object.keys(acceptedFileTypes).join(",")}
             />
-            <p className="text-xs text-muted-foreground mt-2">Max file size: 100MB (simulated)</p>
+            <p className="text-xs text-muted-foreground mt-2">Files are uploaded to a temporary host.</p>
           </div>
         ) : null}
 
@@ -176,35 +181,35 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
               </div>
             </div>
             {isLoading && (
-              <div className="space-y-1">
-                <Progress value={progress} className="w-full h-2" />
-                <p className="text-sm text-primary animate-pulse text-center">Processing... {progress}%</p>
+              <div className="space-y-1 flex flex-col items-center">
+                <Loader2 className="h-8 w-8 text-primary animate-spin my-2" />
+                <p className="text-sm text-primary animate-pulse text-center">Uploading...</p>
               </div>
             )}
             {!isLoading && !error && (
                  <div className="flex items-center text-green-600">
                     <CheckCircle2 className="h-5 w-5 mr-2" />
-                    <span>Processing complete! Link generated.</span>
+                    <span>Upload complete! Link generated.</span>
                  </div>
             )}
-            <Button variant="ghost" size="sm" onClick={clearFile} className="w-full text-destructive hover:bg-destructive/10">
-              <XCircle className="mr-2 h-4 w-4" /> Clear File
+             {!isLoading && (
+                <Button variant="ghost" size="sm" onClick={clearFile} className="w-full text-destructive hover:bg-destructive/10">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear File / Upload New
+                </Button>
+             )}
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="p-3 bg-destructive/10 border border-destructive text-destructive rounded-md flex flex-col items-center space-y-2">
+            <div className="flex items-center">
+              <XCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={clearFile} className="text-destructive border-destructive hover:border-destructive/80">
+               Try Uploading Again
             </Button>
           </div>
-        )}
-
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive text-destructive rounded-md flex items-center">
-            <XCircle className="h-5 w-5 mr-2" />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-
-        {isLoading && !error && !selectedFile && ( /* Show generic loader if loading started without file info display yet */
-            <div className="flex flex-col items-center justify-center p-4">
-                <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                <p className="mt-2 text-muted-foreground">Initializing upload...</p>
-            </div>
         )}
       </CardContent>
     </Card>

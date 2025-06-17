@@ -65,9 +65,10 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
       setProgress(100);
 
       const fileExtension = acceptedFileTypes[file.type] || '.bin'; // Fallback extension
-      // Generate a short random ID, similar to catbox.moe links
+      // Generate a short random ID
       const randomId = Math.random().toString(36).substring(2, 8);
-      const generatedLink = `https://files.catbox.moe/${randomId}${fileExtension}`;
+      // Generate a link that implies it's served by the application itself
+      const generatedLink = `/files/${randomId}${fileExtension}`;
       
       onLinkGenerated(generatedLink);
       setIsLoading(false);
@@ -124,7 +125,7 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
     onLinkGenerated(""); // Clear any existing link
   };
 
-  const FileIcon = selectedFile ? getFileIcon(selectedFile.type) : UploadCloud;
+  const FileIconToRender = selectedFile ? getFileIcon(selectedFile.type) : UploadCloud;
 
   return (
     <Card className={`w-full max-w-lg mx-auto shadow-xl transition-all duration-300 ${isDragging ? 'border-primary ring-2 ring-primary' : ''}`}>
@@ -167,7 +168,7 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
         {selectedFile && (
           <div className="p-4 border rounded-lg bg-secondary/30 space-y-3">
             <div className="flex items-center space-x-3">
-              <FileIcon className="h-10 w-10 text-primary" />
+              <FileIconToRender className="h-10 w-10 text-primary" />
               <div>
                 <p className="font-medium text-foreground truncate max-w-xs" title={selectedFile.name}>{selectedFile.name}</p>
                 <p className="text-sm text-muted-foreground">
@@ -210,3 +211,5 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
     </Card>
   );
 }
+
+    

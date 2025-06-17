@@ -81,7 +81,7 @@ export default function Home() {
       </section>
       
       <section className="py-12">
-         <Image src="https://placehold.co/1200x400.png" alt="Abstract network connections" data-ai-hint="network connections" width={1200} height={400} className="rounded-lg shadow-xl mx-auto" />
+         <Image src="https://files.catbox.moe/lc1ya0.jpg" alt="E-Link banner" data-ai-hint="logo banner" width={1200} height={400} className="rounded-lg shadow-xl mx-auto" />
       </section>
 
       <section>

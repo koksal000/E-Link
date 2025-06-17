@@ -68,8 +68,8 @@ export default function FileUpload({ onLinkGenerated }: FileUploadProps) {
       const randomId = Math.random().toString(36).substring(2, 8);
       const relativeLink = `/files/${randomId}${fileExtension}`;
       
-      // Ensure window.location.origin is accessed only on the client side
-      const absoluteLink = typeof window !== 'undefined' ? `${window.location.origin}${relativeLink}` : relativeLink;
+      const siteBaseUrl = "https://e-link-nine.vercel.app";
+      const absoluteLink = `${siteBaseUrl}${relativeLink}`;
       
       onLinkGenerated(absoluteLink);
       setIsLoading(false);
